@@ -1,0 +1,482 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:GuitarSignalVisualiser.ViewModels"
+        xmlns:controls="using:GuitarSignalVisualiser.Controls"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="850"
+        x:Class="GuitarSignalVisualiser.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="⚡ Guitar Signal Analyzer — Real-Time DSP &amp; Studio Oscilloscope"
+        Width="1280" Height="850"
+        MinWidth="1050" MinHeight="700"
+        Background="#0B0E14"
+        Foreground="#E2E8F0">
+
+    <Window.Styles>
+        <!-- Glassmorphism Card Style -->
+        <Style Selector="Border.CardPanel">
+            <Setter Property="Background" Value="#151A23" />
+            <Setter Property="BorderBrush" Value="#252D3D" />
+            <Setter Property="BorderThickness" Value="1.2" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="14" />
+        </Style>
+
+        <!-- Metric Label Style -->
+        <Style Selector="TextBlock.CardHeader">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="LetterSpacing" Value="0.8" />
+            <Setter Property="Foreground" Value="#94A3B8" />
+        </Style>
+
+        <!-- Value Highlight Style -->
+        <Style Selector="TextBlock.ValueLarge">
+            <Setter Property="FontSize" Value="40" />
+            <Setter Property="FontWeight" Value="ExtraBold" />
+            <Setter Property="Foreground" Value="#F8FAFC" />
+        </Style>
+
+        <Style Selector="TextBlock.ValueMedium">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="#38BDF8" />
+        </Style>
+
+        <!-- Control Header Labels -->
+        <Style Selector="TextBlock.ControlLabel">
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#64748B" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+
+        <!-- Start/Stop Button Dynamic Theming -->
+        <Style Selector="Button.StartButton">
+            <Setter Property="Background" Value="#059669" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#10B981" />
+            <Setter Property="BorderThickness" Value="1.5" />
+        </Style>
+        <Style Selector="Button.StartButton:pointerover">
+            <Setter Property="Background" Value="#10B981" />
+        </Style>
+        <Style Selector="Button.StartButton.active">
+            <Setter Property="Background" Value="#DC2626" />
+            <Setter Property="BorderBrush" Value="#EF4444" />
+        </Style>
+        <Style Selector="Button.StartButton.active:pointerover">
+            <Setter Property="Background" Value="#EF4444" />
+        </Style>
+
+        <!-- Clip Alert LED Badge -->
+        <Style Selector="Border.ClipBadge">
+            <Setter Property="Background" Value="#1E293B" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="Border.ClipBadge.clipped">
+            <Setter Property="Background" Value="#991B1B" />
+            <Setter Property="BorderBrush" Value="#EF4444" />
+        </Style>
+
+        <!-- Tuning Status Badge -->
+        <Style Selector="Border.TuningBadge">
+            <Setter Property="Background" Value="#1E293B" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="Border.TuningBadge.inTune">
+            <Setter Property="Background" Value="#065F46" />
+            <Setter Property="BorderBrush" Value="#10B981" />
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto, 7*, 3*">
+
+        <!-- ========================================== -->
+        <!-- 1. TOP BAR: Audio Input, Gain, Noise Gate  -->
+        <!-- ========================================== -->
+        <Border Grid.Row="0"
+                Classes="CardPanel"
+                Margin="12,12,12,6"
+                Padding="12,10">
+            <Grid ColumnDefinitions="Auto, *, Auto">
+
+                <!-- Left: Branding & Status -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                    <Border Background="#1E293B" CornerRadius="8" Padding="10,8" BorderBrush="#38BDF8" BorderThickness="1">
+                        <TextBlock Text="🎸 DSP" FontSize="16" FontWeight="Black" Foreground="#38BDF8" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Text="GUITAR SIGNAL ANALYZER" FontSize="14" FontWeight="Black" LetterSpacing="0.8" Foreground="#F1F5F9" />
+                        <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#10B981" FontWeight="SemiBold" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Center: Audio Routing & Settings -->
+                <WrapPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0">
+                    <!-- Device Selection -->
+                    <StackPanel Margin="8,4" VerticalAlignment="Center">
+                        <TextBlock Text="WEJŚCIE AUDIO (NAUDIO)" Classes="ControlLabel" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ComboBox ItemsSource="{Binding Devices}"
+                                      SelectedItem="{Binding SelectedDevice}"
+                                      Width="240"
+                                      Height="32"
+                                      FontSize="11.5" />
+                            <Button Command="{Binding RefreshDevicesCommand}"
+                                    ToolTip.Tip="Odśwież listę urządzeń audio"
+                                    Height="32" Width="34"
+                                    Padding="0"
+                                    HorizontalContentAlignment="Center"
+                                    VerticalContentAlignment="Center"
+                                    Background="#1E293B" BorderBrush="#334155">
+                                <TextBlock Text="🔄" FontSize="12" />
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Channel Routing -->
+                    <StackPanel Margin="8,4" VerticalAlignment="Center">
+                        <TextBlock Text="KANAŁ WEJŚCIOWY" Classes="ControlLabel" />
+                        <ComboBox ItemsSource="{Binding Channels}"
+                                  SelectedIndex="{Binding SelectedChannelIndex}"
+                                  Width="180"
+                                  Height="32"
+                                  FontSize="11.5" />
+                    </StackPanel>
+
+                    <!-- Input Gain -->
+                    <StackPanel Margin="8,4" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="GAIN:" Classes="ControlLabel" />
+                            <TextBlock Text="{Binding InputGainLabel}" FontSize="10.5" FontWeight="Bold" Foreground="#38BDF8" />
+                        </StackPanel>
+                        <Slider Minimum="-24" Maximum="24"
+                                Value="{Binding InputGainDb}"
+                                Width="120"
+                                Height="30" />
+                    </StackPanel>
+
+                    <!-- Noise Gate -->
+                    <StackPanel Margin="8,4" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="BRAMKA SZUMÓW:" Classes="ControlLabel" />
+                            <TextBlock Text="{Binding NoiseGateLabel}" FontSize="10.5" FontWeight="Bold" Foreground="#F59E0B" />
+                        </StackPanel>
+                        <Slider Minimum="-80" Maximum="-15"
+                                Value="{Binding NoiseGateThresholdDbfs}"
+                                Width="120"
+                                Height="30" />
+                    </StackPanel>
+
+                    <!-- Display Mode Selectors -->
+                    <StackPanel Margin="8,4" VerticalAlignment="Center">
+                        <TextBlock Text="WIDOK WYKRESU" Classes="ControlLabel" />
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Button Content="Osc+FFT"
+                                    Command="{Binding SetDisplayModeCommand}"
+                                    CommandParameter="Combined"
+                                    FontSize="10.5" Height="30" Padding="8,4"
+                                    Background="#1E293B" BorderBrush="#334155" />
+                            <Button Content="Fala"
+                                    Command="{Binding SetDisplayModeCommand}"
+                                    CommandParameter="Waveform"
+                                    FontSize="10.5" Height="30" Padding="8,4"
+                                    Background="#1E293B" BorderBrush="#334155" />
+                            <Button Content="Widmo"
+                                    Command="{Binding SetDisplayModeCommand}"
+                                    CommandParameter="Spectrum"
+                                    FontSize="10.5" Height="30" Padding="8,4"
+                                    Background="#1E293B" BorderBrush="#334155" />
+                        </StackPanel>
+                    </StackPanel>
+                </WrapPanel>
+
+                <!-- Right: Big Start/Stop Button -->
+                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                    <Button Command="{Binding ToggleCaptureCommand}"
+                            Content="{Binding StartStopButtonText}"
+                            Classes="StartButton"
+                            Classes.active="{Binding IsCapturing}"
+                            FontSize="12.5"
+                            FontWeight="Bold"
+                            Padding="18,10"
+                            CornerRadius="8"
+                            Cursor="Hand" />
+                </StackPanel>
+
+            </Grid>
+        </Border>
+
+        <!-- ========================================== -->
+        <!-- 2. CENTRAL: LIVE SIGNAL VISUALIZER (70%)  -->
+        <!-- ========================================== -->
+        <Border Grid.Row="1"
+                Margin="12,6,12,6"
+                Classes="CardPanel"
+                Padding="3">
+            <controls:SoundWaveControl
+                WaveformData="{Binding WaveformData}"
+                SpectrumData="{Binding SpectrumData}"
+                SpectralCentroidHz="{Binding SpectralCentroidHz}"
+                SampleRate="{Binding SampleRate}"
+                IsClipping="{Binding IsClipping}"
+                DisplayMode="{Binding DisplayMode}" />
+        </Border>
+
+        <!-- ========================================== -->
+        <!-- 3. BOTTOM TELEMETRY: 3 REAL-TIME TILES (30%) -->
+        <!-- ========================================== -->
+        <Grid Grid.Row="2"
+              Margin="12,6,12,12"
+              ColumnDefinitions="*, 12, *, 12, *">
+
+            <!-- ======================================= -->
+            <!-- TILE 1: Pitch & Tuning (Częstotliwość) -->
+            <!-- ======================================= -->
+            <Border Grid.Column="0" Classes="CardPanel">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <!-- Header -->
+                    <DockPanel Grid.Row="0">
+                        <TextBlock Text="⚡ CZĘSTOTLIWOŚĆ I STROJENIE" Classes="CardHeader" DockPanel.Dock="Left" />
+                        <Border DockPanel.Dock="Right"
+                                Classes="TuningBadge"
+                                Classes.inTune="{Binding IsInTune}"
+                                CornerRadius="4"
+                                Padding="8,3">
+                            <TextBlock Text="{Binding TuningStatusText}"
+                                       FontSize="10"
+                                       FontWeight="Bold"
+                                       Foreground="#E2E8F0" />
+                        </Border>
+                    </DockPanel>
+
+                    <!-- Main Pitch Readout -->
+                    <Grid Grid.Row="1" ColumnDefinitions="Auto, *" VerticalAlignment="Center" Margin="0,4">
+                        <!-- Big Note Display -->
+                        <Border Grid.Column="0"
+                                Width="90" Height="90"
+                                Background="#0B0F17"
+                                BorderBrush="#22D3EE"
+                                BorderThickness="2"
+                                CornerRadius="12"
+                                VerticalAlignment="Center">
+                            <Viewbox Margin="8">
+                                <TextBlock Text="{Binding NoteName}"
+                                           FontWeight="Black"
+                                           Foreground="#38BDF8"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Viewbox>
+                        </Border>
+
+                        <!-- Frequency details -->
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="14,0,0,0" Spacing="3">
+                            <TextBlock Text="{Binding FrequencyText}" Classes="ValueMedium" Foreground="#F8FAFC" />
+                            <TextBlock Text="{Binding TuningHint}" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8" />
+                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
+                                <TextBlock Text="Odchylenie:" FontSize="10.5" Foreground="#64748B" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding CentDeviationText}" FontSize="11.5" FontWeight="Bold" Foreground="#38BDF8" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Sub-Cent Tuning Gauge Needle -->
+                    <StackPanel Grid.Row="2" Spacing="3" Margin="0,4,0,0">
+                        <Grid ColumnDefinitions="Auto, *, Auto">
+                            <TextBlock Grid.Column="0" Text="-50 ct (Flat)" FontSize="9" Foreground="#64748B" />
+                            <TextBlock Grid.Column="1" Text="0 ct (In Tune ±3 ct)" FontSize="9" FontWeight="Bold" Foreground="#10B981" HorizontalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="+50 ct (Sharp)" FontSize="9" Foreground="#64748B" />
+                        </Grid>
+
+                        <controls:TuningMeterControl
+                            Cents="{Binding CentDeviation}"
+                            IsActive="{Binding HasPitch}"
+                            Height="20" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ======================================= -->
+            <!-- TILE 2: Amplitude & Dynamics (Amplituda) -->
+            <!-- ======================================= -->
+            <Border Grid.Column="2" Classes="CardPanel">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <!-- Header with Clipping Alert LED -->
+                    <DockPanel Grid.Row="0">
+                        <TextBlock Text="📊 AMPLITUDA I DYNAMIKA" Classes="CardHeader" DockPanel.Dock="Left" />
+                        <!-- CLIP LED -->
+                        <Border DockPanel.Dock="Right"
+                                Classes="ClipBadge"
+                                Classes.clipped="{Binding IsClippingIndicatorActive}"
+                                CornerRadius="4"
+                                Padding="8,2">
+                            <TextBlock Text="● CLIP"
+                                       FontSize="10"
+                                       FontWeight="Black"
+                                       Foreground="#F87171" />
+                        </Border>
+                    </DockPanel>
+
+                    <!-- Main Readouts -->
+                    <Grid Grid.Row="1" ColumnDefinitions="*, *" VerticalAlignment="Center" Margin="0,4">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="POZIOM RMS" Classes="ControlLabel" />
+                            <TextBlock Text="{Binding RmsText}" Classes="ValueMedium" Foreground="#10B981" />
+                            <TextBlock Text="Średnia głośność" FontSize="10" Foreground="#64748B" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Text="POZIOM SZCZYTOWY (PEAK)" Classes="ControlLabel" />
+                            <TextBlock Text="{Binding PeakText}" Classes="ValueMedium" Foreground="#F59E0B" />
+                            <TextBlock Text="Maks. amplituda" FontSize="10" Foreground="#64748B" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Horizontal Multi-Color VU Meter Bar -->
+                    <StackPanel Grid.Row="2" Spacing="4" Margin="0,4,0,0">
+                        <Grid ColumnDefinitions="Auto, *, Auto">
+                            <TextBlock Grid.Column="0" Text="-60 dB" FontSize="9" Foreground="#64748B" />
+                            <TextBlock Grid.Column="1" Text="-12 dB" FontSize="9" Foreground="#64748B" HorizontalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="0 dB (Peak)" FontSize="9" Foreground="#EF4444" FontWeight="Bold" />
+                        </Grid>
+
+                        <!-- Fast VU Meter Bar -->
+                        <Border Height="18"
+                                Background="#0B0F17"
+                                BorderBrush="#334155"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                ClipToBounds="True">
+                            <Grid>
+                                <!-- Multi-color VU Gradient Bar -->
+                                <ProgressBar Minimum="0" Maximum="100"
+                                             Value="{Binding VuMeterPercent}"
+                                             Height="18"
+                                             Background="Transparent">
+                                    <ProgressBar.Foreground>
+                                        <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+                                            <GradientStop Color="#10B981" Offset="0.0" />
+                                            <GradientStop Color="#10B981" Offset="0.65" />
+                                            <GradientStop Color="#F59E0B" Offset="0.85" />
+                                            <GradientStop Color="#EF4444" Offset="1.0" />
+                                        </LinearGradientBrush>
+                                    </ProgressBar.Foreground>
+                                </ProgressBar>
+
+                                <!-- Peak Hold Marker -->
+                                <ProgressBar Minimum="0" Maximum="100"
+                                             Value="{Binding PeakHoldBarPercent}"
+                                             Height="18"
+                                             Opacity="0.3"
+                                             Background="Transparent"
+                                             Foreground="#F8FAFC" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ======================================= -->
+            <!-- TILE 3: Timbre & Harmonics (Barwa)      -->
+            <!-- ======================================= -->
+            <Border Grid.Column="4" Classes="CardPanel">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <!-- Header -->
+                    <DockPanel Grid.Row="0">
+                        <TextBlock Text="🎸 BARWA I NASYCENIE (TIMBRE)" Classes="CardHeader" DockPanel.Dock="Left" />
+                        <Border DockPanel.Dock="Right"
+                                CornerRadius="4"
+                                Padding="8,3"
+                                Background="#1E293B"
+                                BorderBrush="#334155"
+                                BorderThickness="1">
+                            <TextBlock Text="{Binding TimbreClassification}"
+                                       FontSize="10"
+                                       FontWeight="Bold"
+                                       Foreground="#C084FC" />
+                        </Border>
+                    </DockPanel>
+
+                    <!-- Main Readouts -->
+                    <Grid Grid.Row="1" ColumnDefinitions="*, *" VerticalAlignment="Center" Margin="0,4">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="SPECTRAL CENTROID" Classes="ControlLabel" />
+                            <TextBlock Text="{Binding CentroidText}" Classes="ValueMedium" Foreground="#A855F7" />
+                            <TextBlock Text="Środek ciężkości pasma" FontSize="10" Foreground="#64748B" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Text="BOGACTWO SKŁADOWYCH" Classes="ControlLabel" />
+                            <TextBlock Text="{Binding HarmonicRatioText}" Classes="ValueMedium" Foreground="#EC4899" />
+                            <TextBlock Text="Harmoniczne / Przester" FontSize="10" Foreground="#64748B" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Tone Brightness & Harmonics Meters -->
+                    <StackPanel Grid.Row="2" Spacing="4" Margin="0,4,0,0">
+                        <Grid ColumnDefinitions="Auto, *, Auto">
+                            <TextBlock Grid.Column="0" Text="Ciemne (Gryf)" FontSize="9" Foreground="#64748B" />
+                            <TextBlock Grid.Column="1" Text="Zrównoważone" FontSize="9" Foreground="#64748B" HorizontalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="Jasne (Mostek)" FontSize="9" Foreground="#64748B" />
+                        </Grid>
+
+                        <!-- Brightness Gauge -->
+                        <Border Height="8"
+                                Background="#0B0F17"
+                                BorderBrush="#334155"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                ClipToBounds="True">
+                            <ProgressBar Minimum="0" Maximum="100"
+                                         Value="{Binding ToneBrightnessPercent}"
+                                         Height="8"
+                                         Background="Transparent">
+                                <ProgressBar.Foreground>
+                                    <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+                                        <GradientStop Color="#3B82F6" Offset="0.0" />
+                                        <GradientStop Color="#8B5CF6" Offset="0.5" />
+                                        <GradientStop Color="#EC4899" Offset="1.0" />
+                                    </LinearGradientBrush>
+                                </ProgressBar.Foreground>
+                            </ProgressBar>
+                        </Border>
+
+                        <!-- Harmonics / Overdrive Gauge -->
+                        <Grid ColumnDefinitions="Auto, *, Auto" Margin="0,2,0,0">
+                            <TextBlock Grid.Column="0" Text="Czysty ton (Clean)" FontSize="9" Foreground="#64748B" />
+                            <TextBlock Grid.Column="2" Text="High Saturation / Fuzz" FontSize="9" Foreground="#EC4899" FontWeight="SemiBold" />
+                        </Grid>
+
+                        <Border Height="8"
+                                Background="#0B0F17"
+                                BorderBrush="#334155"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                ClipToBounds="True">
+                            <ProgressBar Minimum="0" Maximum="100"
+                                         Value="{Binding HarmonicPercent}"
+                                         Height="8"
+                                         Background="Transparent">
+                                <ProgressBar.Foreground>
+                                    <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+                                        <GradientStop Color="#10B981" Offset="0.0" />
+                                        <GradientStop Color="#F59E0B" Offset="0.45" />
+                                        <GradientStop Color="#EF4444" Offset="0.85" />
+                                    </LinearGradientBrush>
+                                </ProgressBar.Foreground>
+                            </ProgressBar>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+        </Grid>
+
+    </Grid>
+
+</Window>
